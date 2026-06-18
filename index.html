@@ -394,6 +394,22 @@
   let meta = { title:'An Engineering Log', name:'Tanishq Abuj', bio:'' };
   let activeId = null;
 
+  // Use Claude's window.storage when this runs as an artifact; otherwise
+  // fall back to the browser's localStorage so saves persist once this
+  // page is hosted as a normal website.
+  const storage = (window.storage && typeof window.storage.get === 'function')
+    ? window.storage
+    : {
+        async get(key){
+          const raw = localStorage.getItem(key);
+          return raw === null ? null : { key, value: raw };
+        },
+        async set(key, value){
+          localStorage.setItem(key, value);
+          return { key, value };
+        }
+      };
+
   const el = (id) => document.getElementById(id);
 
   function formatDate(isoOrDate){
@@ -460,7 +476,7 @@
   async function loadMeta(){
     meta = { title:'An Engineering Log', name:'Tanishq Abuj', bio: el('about-bio').textContent.trim() };
     try{
-      const r = await window.storage.get(META_KEY, false);
+      const r = await storage.get(META_KEY, false);
       if (r && r.value) meta = JSON.parse(r.value);
     }catch(e){ /* no saved meta yet, defaults stand */ }
     el('site-title').textContent = meta.title;
@@ -481,13 +497,13 @@
       bio: el('about-bio').textContent.trim()
     };
     syncFromMeta();
-    try{ await window.storage.set(META_KEY, JSON.stringify(meta), false); }
+    try{ await storage.set(META_KEY, JSON.stringify(meta), false); }
     catch(e){ console.error('Could not save profile', e); }
   }
 
   async function loadPosts(){
     try{
-      const r = await window.storage.get(POSTS_KEY, false);
+      const r = await storage.get(POSTS_KEY, false);
       posts = (r && r.value) ? JSON.parse(r.value) : null;
     }catch(e){
       posts = null;
@@ -499,7 +515,7 @@
   }
 
   async function savePosts(){
-    try{ await window.storage.set(POSTS_KEY, JSON.stringify(posts), false); }
+    try{ await storage.set(POSTS_KEY, JSON.stringify(posts), false); }
     catch(e){ console.error('Could not save entries', e); }
   }
 
